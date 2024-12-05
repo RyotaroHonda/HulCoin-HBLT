@@ -1,0 +1,6 @@
+[submodule "hdl/common"]
+	path = hdl/common
+	url = https://github.com/AMANEQ-official/common-src.git
+[submodule "hdl/bbt-sitcp-core"]
+	path = hdl/bbt-sitcp-core
+	url = https://github.com/BeeBeansTechnologies/SiTCP_Netlist_for_Kintex7
