@@ -60,22 +60,22 @@ entity toplevel is
 
 -- NIM-IO ---------------------------------------------------------------
     NIMIN               : in std_logic_vector(4 downto 1);
-    NIMOUT              : out std_logic_vector(4 downto 1)
+    NIMOUT              : out std_logic_vector(4 downto 1);
 
 -- Main port ------------------------------------------------------------
 -- Up port --
---    MAIN_IN_U           : in std_logic_vector(31 downto 0);
+    MAIN_IN_U           : in std_logic_vector(31 downto 0);
 -- Down port --
-    --MAIN_IN_D           : in std_logic_vector(31 downto 0);
+    MAIN_IN_D           : in std_logic_vector(31 downto 0);
 
 -- Mezzanine slot -------------------------------------------------------
 -- Up slot --
---    MZN_UP              : in std_logic_vector(31 downto 0);
---    MZN_UN              : in std_logic_vector(31 downto 0);
+    MZN_SIG_UP          : out std_logic_vector(31 downto 0);
+    MZN_SIG_UN          : out std_logic_vector(31 downto 0);
 
 -- Dwon slot --
---    MZN_DP              : in std_logic_vector(31 downto 0);
---    MZN_DN              : in std_logic_vector(31 downto 0)
+    MZN_SIG_DP          : out std_logic_vector(31 downto 0);
+    MZN_SIG_DN          : out std_logic_vector(31 downto 0)
 
 
   );
@@ -121,6 +121,22 @@ architecture Behavioral of toplevel is
   constant kNC7       : regLeaf := (Index => 7);
   constant kNC8       : regLeaf := (Index => 8);
   constant kDummy     : regLeaf := (Index => 0);
+
+  -- MZN ---------------------------------------------------------------------
+  signal mzn_u, mzn_d : std_logic_vector(31 downto 0);
+
+  -- MTX ---------------------------------------------------------------------
+  signal sigin_telescope  : std_logic_vector(2 downto 0);
+  signal sigin_ac         : std_logic_vector(3 downto 0);
+  signal sigin_pad        : std_logic_vector(31 downto 0);
+
+  signal coin_results     : std_logic_vector(63 downto 0);
+  signal probe_out        : std_logic_vector(15 downto 0);
+
+  -- IOM ---------------------------------------------------------------------
+  constant kLengthOut : integer:= 4;
+  type NimOutType is array(kLengthOut-1 downto 0) of std_logic_vector(4 downto 1);
+  signal tmp_nimout       : NimOutType;
 
   -- SDS ---------------------------------------------------------------------
   signal shutdown_over_temp     : std_logic;
@@ -243,7 +259,7 @@ architecture Behavioral of toplevel is
   constant kMiiPhyad      : std_logic_vector(kWidthPhyAddr-1 downto 0):= "00000";
 
   -- Clock ---------------------------------------------------------------------------
-  signal clk_gtx, clk_sys   : std_logic;
+  signal clk_fast, clk_sys  : std_logic;
   signal clk_locked         : std_logic;
   signal clk_sys_locked     : std_logic;
   signal clk_spi            : std_logic;
@@ -256,7 +272,7 @@ architecture Behavioral of toplevel is
       (-- Clock in ports
         -- Clock out ports
         clk_sys          : out    std_logic;
-        clk_gtx          : out    std_logic;
+        clk_fast         : out    std_logic;
         clk_spi          : out    std_logic;
 --        clk_buf          : out    std_logic;
         -- Status and control signals
@@ -285,13 +301,101 @@ architecture Behavioral of toplevel is
   user_reset      <= system_reset or rst_from_bus or emergency_reset(0);
   bct_reset       <= system_reset or emergency_reset(0);
 
-  NIMOUT      <= (others => '0');
+  NIMOUT  <= tmp_nimout(kLengthOut-1);
+  process(clk_fast, system_reset)
+  begin
+    if(system_reset = '1') then
+      tmp_nimout(kLengthOut-1 downto 1)  <= (others => (others => '0'));
+    elsif(clk_fast'event and clk_fast = '1') then
+      tmp_nimout(kLengthOut-1 downto 1)      <= tmp_nimout(kLengthOut-2 downto 0);
+    end if;
+  end process;
 
   dip_sw   <= DIP;
 
   --LED         <= '0' & tcp_isActive(0) & (clk_sys_locked and module_ready) & CDCE_LOCK;
   LED         <= (others => '1');
 
+  -- MZN -------------------------------------------------------------------------------
+  gen_ods : for i in 0 to 31 generate
+  begin
+    u_obufds_u : OBUFDS
+      generic map (
+         IOSTANDARD => "LVDS", -- Specify the output I/O standard
+         SLEW => "SLOW")       -- Specify the output slew rate
+      port map (
+         O  => MZN_SIG_UP(i),
+         OB => MZN_SIG_UN(i),   -- Diff_n output (connect directly to top-level port)
+         I  => mzn_u(i)      -- Buffer input
+      );
+
+    u_obufds_d : OBUFDS
+      generic map (
+         IOSTANDARD => "LVDS", -- Specify the output I/O standard
+         SLEW => "SLOW")       -- Specify the output slew rate
+      port map (
+         O  => MZN_SIG_DP(i),
+         OB => MZN_SIG_DN(i),   -- Diff_n output (connect directly to top-level port)
+         I  => mzn_u(i)      -- Buffer input
+      );
+  end generate;
+
+  u_MZN : entity mylib.DtlNetAssign
+    Port map(
+      outDtlU   => mzn_u,
+      outDtlD   => mzn_d,
+      inDtlU    => coin_results(31 downto 0),
+      inDtlD    => coin_results(63 downto 32)
+      );
+
+  -- MTX -------------------------------------------------------------------------------
+  sigin_telescope <= MAIN_IN_U(2 downto 0);
+  sigin_ac        <= MAIN_IN_U(6 downto 3);
+  sigin_pad       <= MAIN_IN_D;
+
+  u_MTX : entity mylib.MtxCoin
+    port map(
+      rst                 => user_reset,
+      clk                 => clk_slow,
+      clkFast             => clk_fast,
+
+      -- Input --
+      sigInTelescope      => sigin_telescope,
+      sigInAc             => sigin_ac,
+      sigInPad            => sigin_pad,
+
+      -- Output --
+      sigOut              => coin_results,
+      probeOut            => probe_out,
+
+      -- Local bus --
+      addrLocalBus      => addr_LocalBus,
+      dataLocalBusIn    => data_LocalBusIn,
+      dataLocalBusOut   => data_LocalBusOut(kMTX.ID),
+      reLocalBus        => re_LocalBus(kMTX.ID),
+      weLocalBus        => we_LocalBus(kMTX.ID),
+      readyLocalBus     => ready_LocalBus(kMTX.ID)
+
+    );
+
+  -- IOM -------------------------------------------------------------------------------
+  u_IOM : entity mylib.IOManager
+    port map(
+      rst	                => user_reset,
+      clk	                => clk_slow,
+
+      -- Ext Output
+      intInput            => probe_out,
+      extOutput           => tmp_nimout(0),
+
+      -- Local bus --
+      addrLocalBus      => addr_LocalBus,
+      dataLocalBusIn    => data_LocalBusIn,
+      dataLocalBusOut   => data_LocalBusOut(kIOM.ID),
+      reLocalBus        => re_LocalBus(kIOM.ID),
+      weLocalBus        => we_LocalBus(kIOM.ID),
+      readyLocalBus     => ready_LocalBus(kIOM.ID)
+      );
 
   -- TSD -------------------------------------------------------------------------------
   gen_tsd: for i in 0 to kNumLan-1 generate
@@ -393,7 +497,7 @@ architecture Behavioral of toplevel is
    port map(system_reset, clk_sys, sitcp_reset);
 
   PHY_MDIO        <= mdio_out when(mdio_oe = '1') else 'Z';
-  PHY_GTX_CLK     <= clk_gtx;
+  PHY_GTX_CLK     <= clk_sys;
   PHY_HPD         <= '0';
 
   gen_SiTCP : for i in 0 to kNumLan-1 generate
@@ -423,7 +527,7 @@ architecture Behavioral of toplevel is
         GMII_RSTn         => PHY_nRST, --: PHY reset
         GMII_1000M        => '1',  --: GMII mode (0:MII, 1:GMII)
         -- TX
-        GMII_TX_CLK       => clk_gtx, --: Tx clock
+        GMII_TX_CLK       => clk_sys, --: Tx clock
         GMII_TX_EN        => PHY_TXEN,  --: Tx enable
         GMII_TXD          => PHY_TXD,   --: Tx data[7:0]
         GMII_TX_ER        => PHY_TXER,  --: TX error
@@ -500,12 +604,12 @@ architecture Behavioral of toplevel is
   end generate;
 
   -- Clock inst ------------------------------------------------------------------------
-  clk_slow  <= clk_sys;
+  clk_slow  <= clk_spi;
   u_ClkMan_Inst   : clk_wiz_sys
     port map (
       -- Clock out ports
       clk_sys         => clk_sys,
-      clk_gtx         => clk_gtx,
+      clk_fast        => clk_fast,
       clk_spi         => clk_spi,
       -- Status and control signals
       reset           => '0',
