@@ -129,14 +129,11 @@ begin
   coin_pad      <= or_pad(1) and or_pad(2);
 
   -- Layer-2 ----------------------------------------------------------------
-  masked_trg    <= reg_ctrl(0) or coin_tele(1);
-  masked_ac     <= reg_ctrl(1) or or_ac;
-
   u_dwg_trg :  entity mylib.DWGenerator  port map(clkFast, coin_tele(1), reg_dwg_trg,  dwg_out_trg);
   u_dwg_ac :   entity mylib.DWGenerator  port map(clkFast, or_ac,        reg_dwg_orac, dwg_out_orac);
 
-  u_dwg_mtrg : entity mylib.DWGenerator  port map(clkFast, masked_trg,   reg_dwg_trg,  dwg_out_mtrg);
-  u_dwg_mac :  entity mylib.DWGenerator  port map(clkFast, masked_ac,    reg_dwg_orac, dwg_out_morac);
+  dwg_out_mtrg   <= reg_ctrl(0) or dwg_out_trg;
+  dwg_out_morac  <= reg_ctrl(1) or dwg_out_orac;
 
   raw_results(1)    <= coin_tele(1);
   raw_results(2)    <= coin_tele(2);
@@ -180,10 +177,10 @@ begin
   raw_results(63)   <= '0';
   raw_results(64)   <= '0';
 
-  -- Generate 40 ns width to output --
+  -- Generate 20 ns width to output --
   gen_out : for i in 1 to kNumOut generate
   begin
-    u_dwg : entity mylib.DWGenerator port map(clkFast, raw_results(i), X"FFFF000000000000", dwg_out_results(i));
+    u_dwg : entity mylib.DWGenerator port map(clkFast, raw_results(i), X"FFC0000000000000", dwg_out_results(i));
   end generate;
 
   sigOut  <= dwg_out_results;

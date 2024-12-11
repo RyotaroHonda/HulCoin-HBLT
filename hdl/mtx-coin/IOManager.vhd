@@ -8,7 +8,7 @@ use mylib.defIOManager.all;
 
 entity IOManager is
   generic(
-    kNumExtIO           : integer:= 4;
+    kNumExtIO           : integer:= 3;
     kNumIntI            : integer:= 16
   );
   port(
@@ -58,7 +58,7 @@ begin
         reg_intin_sel(0)  <= (others => '0');
         reg_intin_sel(1)  <= (others => '0');
         reg_intin_sel(2)  <= (others => '0');
-        reg_intin_sel(3)  <= (others => '0');
+        --reg_intin_sel(3)  <= (others => '0');
 
         state_lbus	<= Init;
       else
@@ -70,7 +70,7 @@ begin
             reg_intin_sel(0)  <= (others => '0');
             reg_intin_sel(1)  <= (others => '0');
             reg_intin_sel(2)  <= (others => '0');
-            reg_intin_sel(3)  <= (others => '0');
+            --reg_intin_sel(3)  <= (others => '0');
 
             state_lbus		<= Idle;
 
@@ -95,8 +95,8 @@ begin
                 reg_intin_sel(1)  <= dataLocalBusIn(kWidthIntIn-1 downto 0);
               when kSelIntIn2(kNonMultiByte'range) =>
                 reg_intin_sel(2)  <= dataLocalBusIn(kWidthIntIn-1 downto 0);
-              when kSelIntIn3(kNonMultiByte'range) =>
-                reg_intin_sel(3)  <= dataLocalBusIn(kWidthIntIn-1 downto 0);
+--              when kSelIntIn3(kNonMultiByte'range) =>
+--                reg_intin_sel(3)  <= dataLocalBusIn(kWidthIntIn-1 downto 0);
 
               when others => null;
             end case;
@@ -110,8 +110,8 @@ begin
                 dataLocalBusOut  <= (reg_intin_sel(1)'range => reg_intin_sel(1), others => '0');
               when kSelIntIn2(kNonMultiByte'range) =>
                 dataLocalBusOut  <= (reg_intin_sel(2)'range => reg_intin_sel(2), others => '0');
-              when kSelIntIn3(kNonMultiByte'range) =>
-                dataLocalBusOut  <= (reg_intin_sel(3)'range => reg_intin_sel(3), others => '0');
+--              when kSelIntIn3(kNonMultiByte'range) =>
+--                dataLocalBusOut  <= (reg_intin_sel(3)'range => reg_intin_sel(3), others => '0');
 
               when others =>
                 dataLocalBusOut <= x"ff";

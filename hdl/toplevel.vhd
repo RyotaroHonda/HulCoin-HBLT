@@ -133,9 +133,12 @@ architecture Behavioral of toplevel is
   signal coin_results     : std_logic_vector(63 downto 0);
   signal probe_out        : std_logic_vector(15 downto 0);
 
+  -- SGG ---------------------------------------------------------------------
+  signal spill_gate       : std_logic;
+
   -- IOM ---------------------------------------------------------------------
-  constant kLengthOut : integer:= 4;
-  type NimOutType is array(kLengthOut-1 downto 0) of std_logic_vector(4 downto 1);
+  constant kLengthOut : integer:= 3;
+  type NimOutType is array(kLengthOut-1 downto 0) of std_logic_vector(3 downto 1);
   signal tmp_nimout       : NimOutType;
 
   -- SDS ---------------------------------------------------------------------
@@ -301,7 +304,8 @@ architecture Behavioral of toplevel is
   user_reset      <= system_reset or rst_from_bus or emergency_reset(0);
   bct_reset       <= system_reset or emergency_reset(0);
 
-  NIMOUT  <= tmp_nimout(kLengthOut-1);
+
+  NIMOUT(3 downto 1)  <= tmp_nimout(kLengthOut-1);
   process(clk_fast, system_reset)
   begin
     if(system_reset = '1') then
@@ -311,10 +315,17 @@ architecture Behavioral of toplevel is
     end if;
   end process;
 
+  process(clk_slow)
+  begin
+    if(clk_slow'event and clk_slow = '1') then
+      NIMOUT(4)           <= spill_gate;
+    end if;
+  end process;
+
   dip_sw   <= DIP;
 
   --LED         <= '0' & tcp_isActive(0) & (clk_sys_locked and module_ready) & CDCE_LOCK;
-  LED         <= (others => '1');
+  LED         <= "000" & spill_gate;
 
   -- MZN -------------------------------------------------------------------------------
   gen_ods : for i in 0 to 31 generate
@@ -376,6 +387,27 @@ architecture Behavioral of toplevel is
       weLocalBus        => we_LocalBus(kMTX.ID),
       readyLocalBus     => ready_LocalBus(kMTX.ID)
 
+    );
+
+  -- SGG -------------------------------------------------------------------------------
+  u_SGG : entity mylib.SpillGateGenerator
+    port map(
+      rst                 => user_reset,
+      clk                 => clk_slow,
+
+      -- Input --
+      p3timingIn          => NIMIN(1),
+
+      -- Output --
+      spillGateOut        => spill_gate,
+
+      -- Local bus --
+      addrLocalBus      => addr_LocalBus,
+      dataLocalBusIn    => data_LocalBusIn,
+      dataLocalBusOut   => data_LocalBusOut(kSGG.ID),
+      reLocalBus        => re_LocalBus(kSGG.ID),
+      weLocalBus        => we_LocalBus(kSGG.ID),
+      readyLocalBus     => ready_LocalBus(kSGG.ID)
     );
 
   -- IOM -------------------------------------------------------------------------------

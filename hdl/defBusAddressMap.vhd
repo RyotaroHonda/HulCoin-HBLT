@@ -4,7 +4,7 @@ use ieee.std_logic_1164.all;
 package defBusAddressMap is
 
   constant kCurrentVersion      : std_logic_vector(31 downto 0):= x"b1cc0100";
-  constant kNumModules          : natural:= 4;
+  constant kNumModules          : natural:= 5;
 
   constant kWidthModuleID       : positive:=4;
 
@@ -19,6 +19,7 @@ package defBusAddressMap is
   constant kIOM	  : Leaf := (ID => 1);
   constant kSDS	  : Leaf := (ID => 2);
   constant kFMP   : Leaf := (ID => 3);
+  constant kSGG	  : Leaf := (ID => 4);
   constant kDummy : Leaf := (ID => -1);
 
   function GetID(mid_ext_bus: std_logic_vector(kWidthModuleID-1 downto 0))  return ModuleID;
@@ -38,6 +39,7 @@ package body defBusAddressMap is
     case mid_ext_bus is
       when "0000"   => return kMTX.ID;
       when "0001"   => return kIOM.ID;
+      when "0010"   => return kSGG.ID;
       when "1100"   => return kSDS.ID;
       when "1101"   => return kFMP.ID;
       when others   => return kDummy.ID;
