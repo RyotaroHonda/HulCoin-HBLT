@@ -129,6 +129,7 @@ architecture Behavioral of toplevel is
   signal sigin_telescope  : std_logic_vector(2 downto 0);
   signal sigin_ac         : std_logic_vector(3 downto 0);
   signal sigin_pad        : std_logic_vector(31 downto 0);
+  signal trg_fee          : std_logic;
 
   signal coin_results     : std_logic_vector(63 downto 0);
   signal probe_out        : std_logic_vector(15 downto 0);
@@ -137,9 +138,7 @@ architecture Behavioral of toplevel is
   signal spill_gate       : std_logic;
 
   -- IOM ---------------------------------------------------------------------
-  constant kLengthOut : integer:= 3;
-  type NimOutType is array(kLengthOut-1 downto 0) of std_logic_vector(3 downto 1);
-  signal tmp_nimout       : NimOutType;
+  signal tmp_nimout       : std_logic_vector(3 downto 1);
 
   -- SDS ---------------------------------------------------------------------
   signal shutdown_over_temp     : std_logic;
@@ -304,14 +303,10 @@ architecture Behavioral of toplevel is
   user_reset      <= system_reset or rst_from_bus or emergency_reset(0);
   bct_reset       <= system_reset or emergency_reset(0);
 
-
-  NIMOUT(3 downto 1)  <= tmp_nimout(kLengthOut-1);
   process(clk_fast, system_reset)
   begin
-    if(system_reset = '1') then
-      tmp_nimout(kLengthOut-1 downto 1)  <= (others => (others => '0'));
-    elsif(clk_fast'event and clk_fast = '1') then
-      tmp_nimout(kLengthOut-1 downto 1)      <= tmp_nimout(kLengthOut-2 downto 0);
+    if(clk_fast'event and clk_fast = '1') then
+      NIMOUT(3 downto 1)      <= tmp_nimout;
     end if;
   end process;
 
@@ -347,7 +342,7 @@ architecture Behavioral of toplevel is
       port map (
          O  => MZN_SIG_DP(i),
          OB => MZN_SIG_DN(i),   -- Diff_n output (connect directly to top-level port)
-         I  => mzn_u(i)      -- Buffer input
+         I  => mzn_d(i)      -- Buffer input
       );
   end generate;
 
@@ -362,6 +357,7 @@ architecture Behavioral of toplevel is
   -- MTX -------------------------------------------------------------------------------
   sigin_telescope <= MAIN_IN_U(2 downto 0);
   sigin_ac        <= MAIN_IN_U(6 downto 3);
+  trg_fee         <= MAIN_IN_U(7);
   sigin_pad       <= MAIN_IN_D;
 
   u_MTX : entity mylib.MtxCoin
@@ -374,6 +370,7 @@ architecture Behavioral of toplevel is
       sigInTelescope      => sigin_telescope,
       sigInAc             => sigin_ac,
       sigInPad            => sigin_pad,
+      trgFee              => trg_fee,
 
       -- Output --
       sigOut              => coin_results,
@@ -418,7 +415,7 @@ architecture Behavioral of toplevel is
 
       -- Ext Output
       intInput            => probe_out,
-      extOutput           => tmp_nimout(0),
+      extOutput           => tmp_nimout,
 
       -- Local bus --
       addrLocalBus      => addr_LocalBus,

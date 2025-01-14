@@ -346,7 +346,7 @@ set_property PULLUP true [get_ports {DIP[*]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {NIMOUT[*]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {NIMIN[*]}]
 
-set_property IOB TRUE [get_ports {NIMOUT[*]}]
+#set_property IOB TRUE [get_ports {NIMOUT[*]}]
 
 # system ----------------------------------------------------------
 set_property IOSTANDARD LVCMOS33 [get_ports {LED[*]}]

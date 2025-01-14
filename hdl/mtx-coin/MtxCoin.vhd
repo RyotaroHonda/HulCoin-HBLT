@@ -22,6 +22,7 @@ entity MtxCoin is
     sigInTelescope      : in std_logic_vector(kNumTele downto 1);
     sigInAc             : in std_logic_vector(kNumAc downto 1);
     sigInPad            : in std_logic_vector(kNumPad downto 1);
+    trgFee              : in std_logic;
 
     -- Output --
     sigOut              : out std_logic_vector(kNumOut downto 1);
@@ -173,7 +174,7 @@ begin
   raw_results(60)   <= dwg_out_trg and or_reduce(dwg_out_pad(13 downto 4)) and or_reduce(dwg_out_pad(29 downto 20)) and dwg_out_orac;
   raw_results(61)   <= dwg_out_trg and or_reduce(dwg_out_pad(15 downto 2)) and or_reduce(dwg_out_pad(31 downto 18)) and dwg_out_orac;
 
-  raw_results(62)   <= '0';
+  raw_results(62)   <= trgFee;
   raw_results(63)   <= '0';
   raw_results(64)   <= '0';
 
