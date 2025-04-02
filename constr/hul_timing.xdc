@@ -25,11 +25,13 @@ set_false_path -through [get_nets {gen_SiTCP[*].u_SiTCP_Inst/SiTCP/GMII/GMII_TXB
 create_generated_clock -name clk_sys     [get_pins u_ClkMan_Inst/inst/mmcm_adv_inst/CLKOUT0]
 create_generated_clock -name clk_gtx     [get_pins u_ClkMan_Inst/inst/mmcm_adv_inst/CLKOUT1]
 create_generated_clock -name clk_spi     [get_pins u_ClkMan_Inst/inst/mmcm_adv_inst/CLKOUT2]
+create_generated_clock -name clk_fast    [get_pins u_ClkManFast_Inst/inst/mmcm_adv_inst/CLKOUT0]
 
 set_clock_groups -name async_sys -asynchronous \
     -group clk_sys \
     -group clk_gtx \
-    -group clk_spi
+    -group clk_spi \
+    -group clk_fast
 
 set_false_path -through [get_ports {LED[1]}]
 set_false_path -through [get_ports {LED[2]}]

@@ -113,7 +113,7 @@ architecture Behavioral of toplevel is
     Index : DipID;
   end record;
   constant kSiTCP     : regLeaf := (Index => 1);
-  constant kClkOut    : regLeaf := (Index => 2);
+  constant kInvert    : regLeaf := (Index => 2);
   constant kNC3       : regLeaf := (Index => 3);
   constant kNC4       : regLeaf := (Index => 4);
   constant kNC5       : regLeaf := (Index => 5);
@@ -130,6 +130,8 @@ architecture Behavioral of toplevel is
   signal sigin_ac         : std_logic_vector(3 downto 0);
   signal sigin_pad        : std_logic_vector(31 downto 0);
   signal trg_fee          : std_logic;
+  signal reg_main_in      : std_logic_vector(7 downto 0);
+  signal inv_main_in      : std_logic_vector(7 downto 0);
 
   signal coin_results     : std_logic_vector(63 downto 0);
   signal probe_out        : std_logic_vector(15 downto 0);
@@ -284,6 +286,18 @@ architecture Behavioral of toplevel is
         );
   end component;
 
+  component clk_wiz_fast
+    port
+     (-- Clock in ports
+      -- Clock out ports
+      clk_out1          : out    std_logic;
+      -- Status and control signals
+      reset             : in     std_logic;
+      locked            : out    std_logic;
+      clk_in1           : in     std_logic
+     );
+  end component;
+
  begin
   -- ===================================================================================
   -- body
@@ -355,10 +369,20 @@ architecture Behavioral of toplevel is
       );
 
   -- MTX -------------------------------------------------------------------------------
-  sigin_telescope <= MAIN_IN_U(2 downto 0);
-  sigin_ac        <= MAIN_IN_U(6 downto 3);
-  trg_fee         <= MAIN_IN_U(7);
-  sigin_pad       <= MAIN_IN_D;
+  process(clk_fast)
+  begin
+    if(clk_fast'event and clk_fast = '1') then
+      reg_main_in   <= MAIN_IN_U(7 downto 0);
+      sigin_pad     <= MAIN_IN_D;
+    end if;
+  end process;
+
+  inv_main_in   <= not reg_main_in when(dip_sw(kInvert.Index) = '1') else reg_main_in;
+
+  sigin_telescope <= inv_main_in(2 downto 0) ;
+  sigin_ac        <= inv_main_in(6 downto 3) ;
+  trg_fee         <= inv_main_in(7)          ;
+--  sigin_pad       <= MAIN_IN_D;
 
   u_MTX : entity mylib.MtxCoin
     port map(
@@ -638,13 +662,25 @@ architecture Behavioral of toplevel is
     port map (
       -- Clock out ports
       clk_sys         => clk_sys,
-      clk_fast        => clk_fast,
+      clk_fast        => open,
       clk_spi         => clk_spi,
       -- Status and control signals
       reset           => '0',
       locked          => clk_sys_locked,
       -- Clock in ports
       clk_in1         => CLKOSC
+      );
+
+  --
+  u_ClkManFast_Inst   : clk_wiz_fast
+    port map (
+      -- Clock out ports
+      clk_out1        => clk_fast,
+      -- Status and control signals
+      reset           => '0',
+      locked          => open,
+      -- Clock in ports
+      clk_in1         => clk_spi
       );
 
   end Behavioral;

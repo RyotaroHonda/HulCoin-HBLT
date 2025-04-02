@@ -54,6 +54,7 @@ architecture RTL of MtxCoin is
   signal or_ac        : std_logic;
 
   signal sync_pad     : std_logic_vector(sigInPad'range);
+  signal sync_pad_delay : std_logic_vector(sigInPad'range);
   signal dwg_out_pad  : std_logic_vector(sigInPad'range);
   signal or_pad       : std_logic_vector(2 downto 1);
   signal coin_pad     : std_logic;
@@ -110,6 +111,7 @@ begin
   gen_pad : for i in 1 to kNumPad generate
   begin
     u_sync : entity mylib.synchronizer port map(clkFast, sigInPad(i), sync_pad(i));
+    --u_delay : entity mylib.DelayGen generic map(25) port map(clkFast, sync_pad(i), sync_pad_delay(i));
     u_dwg  : entity mylib.DWGenerator  port map(clkFast, sync_pad(i), reg_dwg_pad, dwg_out_pad(i));
   end generate;
 

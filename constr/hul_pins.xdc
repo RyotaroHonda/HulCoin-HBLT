@@ -291,8 +291,8 @@ set_property IOSTANDARD LVCMOS33 [get_ports CLKOSC]
 # input ------------------------------------------------------------
 set_property IOSTANDARD LVCMOS33 [get_ports {MAIN_IN_U[*]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {MAIN_IN_D[*]}]
-#set_property IOB true [get_ports MAIN_IN_U[*]]
-#set_property IOB true [get_ports MAIN_IN_D[*]]
+set_property IOB true [get_ports MAIN_IN_U[*]]
+set_property IOB true [get_ports MAIN_IN_D[*]]
 
 set_property IOSTANDARD LVDS [get_ports {MZN_SIG_UP[*]}]
 set_property IOSTANDARD LVDS [get_ports {MZN_SIG_DP[*]}]
@@ -346,7 +346,7 @@ set_property PULLUP true [get_ports {DIP[*]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {NIMOUT[*]}]
 set_property IOSTANDARD LVCMOS33 [get_ports {NIMIN[*]}]
 
-#set_property IOB TRUE [get_ports {NIMOUT[*]}]
+set_property IOB TRUE [get_ports {NIMOUT[*]}]
 
 # system ----------------------------------------------------------
 set_property IOSTANDARD LVCMOS33 [get_ports {LED[*]}]
