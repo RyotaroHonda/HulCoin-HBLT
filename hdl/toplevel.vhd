@@ -130,8 +130,9 @@ architecture Behavioral of toplevel is
   signal sigin_ac         : std_logic_vector(3 downto 0);
   signal sigin_pad        : std_logic_vector(31 downto 0);
   signal trg_fee          : std_logic;
-  signal reg_main_in      : std_logic_vector(7 downto 0);
-  signal inv_main_in      : std_logic_vector(7 downto 0);
+  signal mini_scinti      : std_logic;
+  signal reg_main_in      : std_logic_vector(8 downto 0);
+  signal inv_main_in      : std_logic_vector(8 downto 0);
 
   signal coin_results     : std_logic_vector(63 downto 0);
   signal probe_out        : std_logic_vector(15 downto 0);
@@ -372,7 +373,7 @@ architecture Behavioral of toplevel is
   process(clk_fast)
   begin
     if(clk_fast'event and clk_fast = '1') then
-      reg_main_in   <= MAIN_IN_U(7 downto 0);
+      reg_main_in   <= MAIN_IN_U(8 downto 0);
       sigin_pad     <= MAIN_IN_D;
     end if;
   end process;
@@ -382,6 +383,7 @@ architecture Behavioral of toplevel is
   sigin_telescope <= inv_main_in(2 downto 0) ;
   sigin_ac        <= inv_main_in(6 downto 3) ;
   trg_fee         <= inv_main_in(7)          ;
+  mini_scinti     <= inv_main_in(8)          ;
 --  sigin_pad       <= MAIN_IN_D;
 
   u_MTX : entity mylib.MtxCoin
@@ -395,6 +397,7 @@ architecture Behavioral of toplevel is
       sigInAc             => sigin_ac,
       sigInPad            => sigin_pad,
       trgFee              => trg_fee,
+      miniScinti          => mini_scinti,
 
       -- Output --
       sigOut              => coin_results,

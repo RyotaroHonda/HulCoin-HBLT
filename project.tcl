@@ -27,6 +27,7 @@ proc checkRequiredFiles { origin_dir} {
  "[file normalize "$origin_dir/ip/RbcpCdc_LinkToSys/RbcpCdc_LinkToSys.xci"]"\
  "[file normalize "$origin_dir/hdl/bbt-sitcp-core/SiTCP_XC7K_32K_BBT_V110.edf"]"\
  "[file normalize "$origin_dir/ip/clk_wiz_sys/clk_wiz_sys.xci"]"\
+ "[file normalize "$origin_dir/ip/clk_wiz_fast/clk_wiz_fast.xci"]"\
  "[file normalize "$origin_dir/ip/fmp_wd_fifo/fmp_wd_fifo.xci"]"\
  "[file normalize "$origin_dir/ip/fmp_rd_fifo/fmp_rd_fifo.xci"]"\
  "[file normalize "$origin_dir/ip/sem_controller/sem_controller.xci"]" \
@@ -192,6 +193,7 @@ set files [list \
  [file normalize "${origin_dir}/ip/RbcpCdc_LinkToSys/RbcpCdc_LinkToSys.xci"] \
  [file normalize "${origin_dir}/hdl/bbt-sitcp-core/SiTCP_XC7K_32K_BBT_V110.edf"] \
  [file normalize "${origin_dir}/ip/clk_wiz_sys/clk_wiz_sys.xci"] \
+ [file normalize "${origin_dir}/ip/clk_wiz_fast/clk_wiz_fast.xci"] \
  [file normalize "${origin_dir}/ip/fmp_wd_fifo/fmp_wd_fifo.xci"] \
  [file normalize "${origin_dir}/ip/fmp_rd_fifo/fmp_rd_fifo.xci"] \
  [file normalize "${origin_dir}/ip/sem_controller/sem_controller.xci"] \
@@ -259,6 +261,16 @@ set_property -name "file_type" -value "EDIF" -objects $file_obj
 set_property -name "library" -value "mylib" -objects $file_obj
 
 set file "$origin_dir/ip/clk_wiz_sys/clk_wiz_sys.xci"
+set file [file normalize $file]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "generate_files_for_reference" -value "0" -objects $file_obj
+set_property -name "library" -value "mylib" -objects $file_obj
+set_property -name "registered_with_manager" -value "1" -objects $file_obj
+if { ![get_property "is_locked" $file_obj] } {
+  set_property -name "synth_checkpoint_mode" -value "Singular" -objects $file_obj
+}
+
+set file "$origin_dir/ip/clk_wiz_fast/clk_wiz_fast.xci"
 set file [file normalize $file]
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "generate_files_for_reference" -value "0" -objects $file_obj
