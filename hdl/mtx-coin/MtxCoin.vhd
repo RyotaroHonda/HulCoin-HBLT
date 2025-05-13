@@ -8,7 +8,7 @@ use mylib.defBCT.all;
 entity MtxCoin is
   generic(
     kNumTele    : integer:= 3;
-    kNumAc      : integer:= 4;
+    kNumAc      : integer:= 6;
     kNumPad     : integer:= 32;
     kNumOut     : integer:= 64;
     kNumProbe   : integer:= 16
@@ -21,9 +21,10 @@ entity MtxCoin is
     -- Input --
     sigInTelescope      : in std_logic_vector(kNumTele downto 1);
     sigInAc             : in std_logic_vector(kNumAc downto 1);
-    sigInPad            : in std_logic_vector(kNumPad downto 1);
+    --sigInPad            : in std_logic_vector(kNumPad downto 1);
     trgFee              : in std_logic;
     miniScinti          : in std_logic;
+    blackPmt            : in std_logic;
 
     -- Output --
     sigOut              : out std_logic_vector(kNumOut downto 1);
@@ -54,11 +55,11 @@ architecture RTL of MtxCoin is
   signal dwg_out_ac   : std_logic_vector(sigInAc'range);
   signal or_ac        : std_logic;
 
-  signal sync_pad     : std_logic_vector(sigInPad'range);
-  signal sync_pad_delay : std_logic_vector(sigInPad'range);
-  signal dwg_out_pad  : std_logic_vector(sigInPad'range);
-  signal or_pad       : std_logic_vector(2 downto 1);
-  signal coin_pad     : std_logic;
+  --signal sync_pad     : std_logic_vector(sigInPad'range);
+  --signal sync_pad_delay : std_logic_vector(sigInPad'range);
+  --signal dwg_out_pad  : std_logic_vector(sigInPad'range);
+  --signal or_pad       : std_logic_vector(2 downto 1);
+  --signal coin_pad     : std_logic;
 
   -- layer-2 --
   signal masked_trg   : std_logic;
@@ -72,6 +73,7 @@ architecture RTL of MtxCoin is
 
   -- probe --
   signal reg_probe_out    : std_logic_vector(probeOut'range);
+  signal buf_blank_pmt, buf_mini_scinti : std_logic;
 
   -- local bus --
   signal reg_dwg_tele, reg_dwg_ac, reg_dwg_pad, reg_dwg_trg, reg_dwg_orac : std_logic_vector(63 downto 0);
@@ -109,12 +111,12 @@ begin
     u_dwg  : entity mylib.DWGenerator  port map(clkFast, sync_ac(i), reg_dwg_ac, dwg_out_ac(i));
   end generate;
 
-  gen_pad : for i in 1 to kNumPad generate
-  begin
-    u_sync : entity mylib.synchronizer port map(clkFast, sigInPad(i), sync_pad(i));
-    --u_delay : entity mylib.DelayGen generic map(25) port map(clkFast, sync_pad(i), sync_pad_delay(i));
-    u_dwg  : entity mylib.DWGenerator  port map(clkFast, sync_pad(i), reg_dwg_pad, dwg_out_pad(i));
-  end generate;
+--  gen_pad : for i in 1 to kNumPad generate
+--  begin
+--    u_sync : entity mylib.synchronizer port map(clkFast, sigInPad(i), sync_pad(i));
+--    --u_delay : entity mylib.DelayGen generic map(25) port map(clkFast, sync_pad(i), sync_pad_delay(i));
+--    u_dwg  : entity mylib.DWGenerator  port map(clkFast, sync_pad(i), reg_dwg_pad, dwg_out_pad(i));
+--  end generate;
 
   -- Telescope --
   masked_tele   <= dwg_out_tele or reg_coin_tele;
@@ -128,9 +130,9 @@ begin
   or_ac         <= '1' when(unsigned(dwg_out_ac) /= 0) else '0';
 
   -- Pad --
-  or_pad(1)     <= '1' when(unsigned(dwg_out_pad(16 downto 1))  /= 0) else '0';
-  or_pad(2)     <= '1' when(unsigned(dwg_out_pad(32 downto 17)) /= 0) else '0';
-  coin_pad      <= or_pad(1) and or_pad(2);
+  --or_pad(1)     <= '1' when(unsigned(dwg_out_pad(16 downto 1))  /= 0) else '0';
+  --or_pad(2)     <= '1' when(unsigned(dwg_out_pad(32 downto 17)) /= 0) else '0';
+  --coin_pad      <= or_pad(1) and or_pad(2);
 
   -- Layer-2 ----------------------------------------------------------------
   u_dwg_trg :  entity mylib.DWGenerator  port map(clkFast, coin_tele(1), reg_dwg_trg,  dwg_out_trg);
@@ -146,39 +148,41 @@ begin
   raw_results(5)    <= sigInTelescope(1);
   raw_results(6)    <= sigInTelescope(2);
   raw_results(7)    <= sigInTelescope(3);
-  raw_results(8)    <= or_pad(1);
-  raw_results(9)    <= or_pad(2);
-  raw_results(10)   <= coin_pad;
-  raw_results(11)   <= coin_pad and dwg_out_trg;
-  gen_coin_mppc : for i in 1 to kNumPad generate
+  raw_results(8)    <= '0';
+  raw_results(9)    <= '0';
+  raw_results(10)   <= '0';
+  raw_results(11)   <= '0';
+  gen_coin_mppc : for i in 1 to kNumPad-2 generate
   begin
-    raw_results(i+11)   <= dwg_out_pad(i) and dwg_out_mtrg and dwg_out_morac;
+    raw_results(i+11)   <= '0';
   end generate;
 
-  gen_coin_ac : for i in 1 to kNumAc generate
+    raw_results(42) <= dwg_out_ac(4) and dwg_out_mtrg;
+    raw_results(43) <= dwg_out_ac(5) and dwg_out_mtrg;
+
+  gen_coin_ac : for i in 1 to kNumAc-2 generate
   begin
     raw_results(i+43)   <= dwg_out_ac(i) and dwg_out_mtrg;
   end generate;
 
   raw_results(48)   <= or_ac;
   raw_results(49)   <= or_ac and dwg_out_trg;
-  raw_results(50)   <= or_ac and or_pad(1);
-  raw_results(51)   <= or_ac and or_pad(2);
-  raw_results(52)   <= or_ac and coin_pad;
-  raw_results(53)   <= coin_pad and dwg_out_trg and dwg_out_orac;
+  raw_results(50)   <= '0';
+  raw_results(51)   <= '0';
+  raw_results(52)   <= '0';
+  raw_results(53)   <= '0';
 
-  raw_results(54)   <= dwg_out_trg and or_reduce(dwg_out_pad(9 downto 8)) and or_reduce(dwg_out_pad(25 downto 24));
-  raw_results(55)   <= dwg_out_trg and or_reduce(dwg_out_pad(11 downto 6)) and or_reduce(dwg_out_pad(27 downto 22));
-  raw_results(56)   <= dwg_out_trg and or_reduce(dwg_out_pad(13 downto 4)) and or_reduce(dwg_out_pad(29 downto 20));
-  raw_results(57)   <= dwg_out_trg and or_reduce(dwg_out_pad(15 downto 2)) and or_reduce(dwg_out_pad(31 downto 18));
+  raw_results(54)   <= trgFee;
+  raw_results(55)   <= miniScinti;
+  raw_results(56)   <= blackPmt;
 
-  raw_results(58)   <= dwg_out_trg and or_reduce(dwg_out_pad(9 downto 8))  and or_reduce(dwg_out_pad(25 downto 24)) and dwg_out_orac;
-  raw_results(59)   <= dwg_out_trg and or_reduce(dwg_out_pad(11 downto 6)) and or_reduce(dwg_out_pad(27 downto 22)) and dwg_out_orac;
-  raw_results(60)   <= dwg_out_trg and or_reduce(dwg_out_pad(13 downto 4)) and or_reduce(dwg_out_pad(29 downto 20)) and dwg_out_orac;
-  raw_results(61)   <= dwg_out_trg and or_reduce(dwg_out_pad(15 downto 2)) and or_reduce(dwg_out_pad(31 downto 18)) and dwg_out_orac;
-
-  raw_results(62)   <= trgFee;
-  raw_results(63)   <= miniScinti;
+  raw_results(57)   <= '0';
+  raw_results(58)   <= '0';
+  raw_results(59)   <= '0';
+  raw_results(60)   <= '0';
+  raw_results(61)   <= '0';
+  raw_results(62)   <= '0';
+  raw_results(63)   <= '0';
   raw_results(64)   <= '0';
 
   -- Generate 20 ns width to output --
@@ -194,14 +198,14 @@ begin
   reg_probe_out(1)   <= dwg_out_tele(1);
   reg_probe_out(2)   <= dwg_out_tele(2);
   reg_probe_out(3)   <= dwg_out_tele(3);
-  reg_probe_out(4)   <= or_ac;
-  reg_probe_out(5)   <= coin_pad;
+  reg_probe_out(4)   <= '0';
+  reg_probe_out(5)   <= buf_blank_pmt;
   reg_probe_out(6)   <= dwg_out_trg;
   reg_probe_out(7)   <= dwg_out_orac;
-  reg_probe_out(8)   <= coin_pad and dwg_out_trg;
+  reg_probe_out(8)   <= buf_mini_scinti;
   reg_probe_out(9)   <= or_ac and dwg_out_trg;
-  reg_probe_out(10)  <= or_ac and coin_pad;
-  reg_probe_out(11)  <= coin_pad and dwg_out_trg and dwg_out_orac;
+  reg_probe_out(10)  <= dwg_out_ac(4);
+  reg_probe_out(11)  <= dwg_out_ac(5);
   reg_probe_out(12)  <= '0';
   reg_probe_out(13)  <= '0';
   reg_probe_out(14)  <= '0';
@@ -211,6 +215,9 @@ begin
   begin
     if(clkFast'event and clkFast = '1') then
       probeOut  <= reg_probe_out;
+
+      buf_blank_pmt   <= blackPmt;
+      buf_mini_scinti <= miniScinti;
     end if;
   end process;
 
